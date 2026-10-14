@@ -1,0 +1,662 @@
+{
+  "name": "generate_cover_letter",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "job_title"
+            },
+            {
+              "name": "company"
+            }
+          ]
+        }
+      },
+      "id": "5c814285-3695-41d4-a276-c8dc60e63890",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        1872,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1937392997,
+          "mode": "list",
+          "cachedResultName": "applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1937392997"
+        },
+        "options": {}
+      },
+      "id": "41920698-b7bf-4789-aced-1ecbf09b3bba",
+      "name": "Get Applications Rows",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        2112,
+        1408
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Read optional inputs from the trigger\nconst trigger = $('When Executed by Another Workflow').item.json;\nconst inputJobTitle = (trigger.job_title || '').trim().toLowerCase();\nconst inputCompany = (trigger.company || '').trim().toLowerCase();\n\n// All rows from the Google Sheets \"Get Applications Rows\" node feeding into this node\nconst rows = items.map(item => item.json);\n\nif (rows.length === 0) {\n  return [{ json: { status: 'not_found' } }];\n}\n\nlet matches;\n\nif (!inputJobTitle && !inputCompany) {\n  // No filters given -> \"most recent job\" = last row in the sheet\n  matches = [rows[rows.length - 1]];\n} else {\n  matches = rows.filter(row => {\n    const rowCompany = (row.company || '').toLowerCase();\n    const rowTitle = (row.job_title || '').toLowerCase();\n\n    const companyOk = inputCompany ? rowCompany.includes(inputCompany) : true;\n    const titleOk = inputJobTitle ? rowTitle.includes(inputJobTitle) : true;\n\n    return companyOk && titleOk;\n  });\n}\n\nif (matches.length === 0) {\n  return [{ json: { status: 'not_found' } }];\n}\n\nif (matches.length > 1) {\n  return [{\n    json: {\n      status: 'needs_clarification',\n      candidates: matches.map(row => ({\n        job_title: row.job_title,\n        company: row.company,\n        timestamp: row.timestamp,\n        decision: row.decision\n      }))\n    }\n  }];\n}\n\n// Exactly one match -> proceed\nconst target = matches[0];\n\nreturn [{\n  json: {\n    status: 'proceed',\n    row_number: target.row_number,\n    job_title: target.job_title,\n    company: target.company,\n    job_text: target.job_text,\n    decision: target.decision,\n    match_score: target.match_score\n  }\n}];"
+      },
+      "id": "8c3bf64d-408a-4511-a5b1-ddd2fcf48a70",
+      "name": "Select Target Row",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2368,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "target-found-cond",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "proceed",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5577c3ea-b850-4d7c-8969-fd0d209c5d4a",
+      "name": "Target Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2624,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { status: $json.status, candidates: $json.candidates } }}",
+        "options": {}
+      },
+      "id": "1074416f-e5e9-44bf-95d6-a01af10d0506",
+      "name": "Format Response - Not Found or Ambiguous",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2864,
+        1568
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "strong-match-cond",
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "Strong match",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "partial-match-cond",
+              "leftValue": "={{ $json.decision }}",
+              "rightValue": "Partial match",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "aa776d02-da4b-45a4-a909-df1643e0a8bc",
+      "name": "Score Gate - Accepted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2864,
+        1408
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1937392997,
+          "mode": "list",
+          "cachedResultName": "applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1937392997"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "cover_letter_generated": "No"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "timestamp",
+              "displayName": "timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "job_text",
+              "displayName": "job_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "match_score",
+              "displayName": "match_score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "decision",
+              "displayName": "decision",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "gaps_identified",
+              "displayName": "gaps_identified",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "reasoning",
+              "displayName": "reasoning",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "cover_letter_generated",
+              "displayName": "cover_letter_generated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "cover_letter_text",
+              "displayName": "cover_letter_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "bd991145-5338-428c-b728-dd63231b0d35",
+      "name": "Update Sheet - Skip (Weak Match)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3120,
+        1520
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { status: 'skipped', reason: 'decision was Weak Match', job_title: $('Score Gate - Accepted?').item.json.job_title, company: $('Score Gate - Accepted?').item.json.company, decision: $('Score Gate - Accepted?').item.json.decision } }}",
+        "options": {}
+      },
+      "id": "09aa30c1-1e5b-4de4-80c4-c7dcba311a62",
+      "name": "Format Response - Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3360,
+        1520
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1563753373,
+          "mode": "list",
+          "cachedResultName": "profile",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1563753373"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "profile_id",
+              "lookupValue": "1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "008da30a-1346-4583-bf07-edd5fe201b94",
+      "name": "Get Profile Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        3120,
+        1264
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.7-flash",
+        "options": {}
+      },
+      "id": "861c1f62-73f7-4378-88d6-dbc37c574484",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        3520,
+        1264
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "WZIZeRkqJRa4ERz0",
+          "name": "paid-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"cover_letter_text\": \"Dear Hiring Manager, ... [full cover letter body] ... Sincerely, Nagham Habli\"\n}"
+      },
+      "id": "0dfc4457-244a-4948-ae15-c85d851f82f9",
+      "name": "Cover Letter Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.2,
+      "position": [
+        3712,
+        1248
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are writing a tailored cover letter.\n\nCandidate profile:\nName: {{ $('Get Profile Row').item.json.name}}\nSkills: {{ $('Get Profile Row').item.json.skills }}\nYears of experience: {{ $('Get Profile Row').item.json.years_experience }}\nEducation: {{ $('Get Profile Row').item.json.education }}\nPast roles: {{ $('Get Profile Row').item.json.past_roles }}\n\nTarget job:\nTitle: {{ $('Score Gate - Accepted?').item.json.job_title }}\nCompany: {{ $('Score Gate - Accepted?').item.json.company }}\nJob description:\n{{ $('Score Gate - Accepted?').item.json.job_text }}\n\nWrite a concise, tailored, professional cover letter connecting the candidate's real experience to this specific role. Do not invent experience not present in the profile.",
+        "hasOutputParser": true
+      },
+      "id": "ec328a95-f49a-4e1a-9c68-7172e428b650",
+      "name": "Generate Cover Letter",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.6,
+      "position": [
+        3520,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { row_number: $('Score Gate - Accepted?').item.json.row_number, job_title: $('Score Gate - Accepted?').item.json.job_title, company: $('Score Gate - Accepted?').item.json.company, cover_letter_text: $json.output.cover_letter_text } }}",
+        "options": {}
+      },
+      "id": "c06f5918-7ec6-4e70-b73a-514240b1156e",
+      "name": "Normalize Cover Letter",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3888,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1937392997,
+          "mode": "list",
+          "cachedResultName": "applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1937392997"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "row_number"
+          ],
+          "value": {
+            "row_number": "={{ $json.row_number }}",
+            "cover_letter_generated": "Yes",
+            "cover_letter_text": "={{ $json.cover_letter_text }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "93f46961-16df-4eea-8049-21a8670228a7",
+      "name": "Update Sheet - Generated",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        4128,
+        1056
+      ],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { status: 'generated', job_title: $json.job_title, company: $json.company, cover_letter_text: $json.cover_letter_text } }}",
+        "options": {}
+      },
+      "id": "d6314f33-fda9-4ee0-b56f-c514a9f2ead0",
+      "name": "Format Response - Generated",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4352,
+        1056
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Get Applications Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Applications Rows": {
+      "main": [
+        [
+          {
+            "node": "Select Target Row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Target Row": {
+      "main": [
+        [
+          {
+            "node": "Target Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Target Found?": {
+      "main": [
+        [
+          {
+            "node": "Score Gate - Accepted?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Response - Not Found or Ambiguous",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score Gate - Accepted?": {
+      "main": [
+        [
+          {
+            "node": "Get Profile Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Sheet - Skip (Weak Match)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet - Skip (Weak Match)": {
+      "main": [
+        [
+          {
+            "node": "Format Response - Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Profile Row": {
+      "main": [
+        [
+          {
+            "node": "Generate Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Generate Cover Letter",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cover Letter Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Generate Cover Letter",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Normalize Cover Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Cover Letter": {
+      "main": [
+        [
+          {
+            "node": "Update Sheet - Generated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Sheet - Generated": {
+      "main": [
+        [
+          {
+            "node": "Format Response - Generated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "fade1ba1-0ee3-4d8f-a280-8b7552ac898e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "80927a9b73ab1eef3e8a5a62be35ceebf116b1a97baaabc437caa65d9e16d796"
+  },
+  "nodeGroups": [],
+  "id": "3mOsiTUTBKi1whd8",
+  "tags": []
+}

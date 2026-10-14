@@ -1,0 +1,544 @@
+{
+  "name": "get_insights",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "weeks",
+              "triggerAtHour": 10
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        4592,
+        1136
+      ],
+      "id": "50f28f5f-4c8d-466a-a046-af8e1cecefc6",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "time_window_days"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        4512,
+        1376
+      ],
+      "id": "7d71835b-e5ea-495c-8006-8c3bc5fa3d0c",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1a1a1a1-0001-4000-8000-000000000001",
+              "name": "trigger_source",
+              "value": "scheduled",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        4816,
+        1136
+      ],
+      "id": "31e8f372-bd45-43cc-8b6f-a76aa3ab5a34",
+      "name": "Tag Scheduled"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1a1a1a1-0002-4000-8000-000000000001",
+              "name": "trigger_source",
+              "value": "on_demand",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        4816,
+        1376
+      ],
+      "id": "45138d81-11a6-46bf-a96c-1eeead8475b3",
+      "name": "Tag OnDemand"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        5040,
+        1248
+      ],
+      "id": "8feb388a-e5e2-4145-853a-ba548ed32d68",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2b625add-a270-4a8c-a2bf-3bd37fa50502",
+              "name": "window_days",
+              "value": "={{ $json.trigger_source === 'scheduled' ? 7 : ($json.time_window_days ? Number($json.time_window_days) : 0) }}",
+              "type": "number"
+            },
+            {
+              "id": "2b625add-a270-4a8c-a2bf-3bd37fa50503",
+              "name": "is_scheduled_run",
+              "value": "={{ $json.trigger_source === 'scheduled' }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        5264,
+        1248
+      ],
+      "id": "3faaed56-9e23-4cc8-9382-10cf43fe4a0a",
+      "name": "Resolve Window"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1937392997,
+          "mode": "list",
+          "cachedResultName": "applications",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1937392997"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5488,
+        1248
+      ],
+      "id": "410166a6-d047-4047-b383-1bd0bd6ac2fa",
+      "name": "Read Applications",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are analyzing a job search tracker for a candidate using an AI job application assistant.\n\nCurrent period stats:\n{{ JSON.stringify($json.current_period) }}\n\n{{ $json.has_comparison ? 'Prior period stats: ' + JSON.stringify($json.prior_period) + '\\nDeltas vs prior period: ' + JSON.stringify($json.deltas) : 'No prior-period comparison is available for this run (full history view).' }}\n\nRaw gap notes identified across applications in this period:\n- {{ $json.gaps_identified_raw.length ? $json.gaps_identified_raw.join('\\n- ') : '(none identified)' }}\n\nBased on this, produce:\n1. A short 2-3 sentence summary of how the job search is going{{ $json.has_comparison ? ', including how this period compares to the previous one' : '' }}. Use your own words, not the raw numbers restated mechanically.\n2. 2-4 recurring gap themes: cluster similar gap notes together into short, distinct themes, phrased in your own words (do not copy the raw notes verbatim).\n3. 2-3 concrete, specific next actions the candidate should take to close those gaps or improve their application strategy.\n\nRespond only with the structured fields requested.",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        5936,
+        1248
+      ],
+      "id": "b826b857-411e-4dfb-9e43-93c94198fb9b",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.7-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        5824,
+        1456
+      ],
+      "id": "c168dde0-755d-41f1-a967-f66ebd2bd264",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "WZIZeRkqJRa4ERz0",
+          "name": "paid-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"summary\": \"You applied to 5 roles this week, up from 3 last week, with average match score holding steady around 72%.\",\n  \"recurring_gap_themes\": [\n    \"Limited cloud/DevOps experience\",\n    \"No formal leadership experience\"\n  ],\n  \"next_actions\": [\n    \"Add a bullet about your CI/CD pipeline work to your profile\",\n    \"Consider highlighting the mentoring you did on your last team to address the leadership gap\"\n  ]\n}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        6080,
+        1456
+      ],
+      "id": "71bfc949-6be1-4d9e-a26a-2b0f4553dc3f",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000001",
+              "name": "status",
+              "value": "success",
+              "type": "string"
+            },
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000002",
+              "name": "is_scheduled_run",
+              "value": "={{ $('Code in JavaScript').item.json.is_scheduled_run }}",
+              "type": "boolean"
+            },
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000003",
+              "name": "summary",
+              "value": "={{ $json.output.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000004",
+              "name": "recurring_gap_themes",
+              "value": "={{ $json.output.recurring_gap_themes }}",
+              "type": "array"
+            },
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000005",
+              "name": "next_actions",
+              "value": "={{ $json.output.next_actions }}",
+              "type": "array"
+            },
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000006",
+              "name": "stats",
+              "value": "={{ { current_period: $('Code in JavaScript').item.json.current_period, prior_period: $('Code in JavaScript').item.json.prior_period, deltas: $('Code in JavaScript').item.json.deltas, has_comparison: $('Code in JavaScript').item.json.has_comparison } }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        6304,
+        1248
+      ],
+      "id": "4f0735cc-b796-48e6-9df0-c776090e0d72",
+      "name": "Normalize Output"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1c1c1c1-0001-4000-8000-000000000001",
+              "leftValue": "={{ $json.is_scheduled_run }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6528,
+        1248
+      ],
+      "id": "b359b0ed-deb4-47a2-a20a-d86ad77423bc",
+      "name": "Is Scheduled Run?"
+    },
+    {
+      "parameters": {
+        "chatId": "7257835372",
+        "text": "=📊 *Weekly Job Search Insights* — {{ $now.format('MMM d, yyyy') }}\n\n{{ $json.summary }}\n\n*Recurring Gaps*\n{{ $json.recurring_gap_themes.map(t => '• ' + t).join('\\n') }}\n\n*Suggested Next Actions*\n{{ $json.next_actions.map(a => '• ' + a).join('\\n') }}\n\n*Stats*\nApplications this period: {{ $json.stats.current_period.total_applications }}\nAvg match score: {{ $json.stats.current_period.avg_match_score }}\nStrong / Partial / Weak: {{ $json.stats.current_period.strong_match_count }} / {{ $json.stats.current_period.partial_match_count }} / {{ $json.stats.current_period.weak_match_count }}{{ $json.stats.has_comparison ? '\\n\\nΔ vs last period — Applications: ' + $json.stats.deltas.total_applications + ', Avg score: ' + $json.stats.deltas.avg_match_score : '' }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        6752,
+        1136
+      ],
+      "id": "e8559b4b-f21c-4aeb-b5d7-d6e8e461a826",
+      "name": "Send Weekly Telegram Digest",
+      "webhookId": "1e56d90f-7f6e-4a68-8601-e74f0b923771",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- Pull window_days / is_scheduled_run from the upstream Set node ---\nconst windowNode = $('Resolve Window').first().json;\nconst windowDays = windowNode.window_days; // 0/falsy => full history, no comparison\nconst isScheduledRun = windowNode.is_scheduled_run || false;\n\n// --- Pull all Applications rows from the Google Sheets read node ---\nconst rows = $('Read Applications').all().map(item => item.json);\n\nfunction parseTs(tsStr) {\n  if (!tsStr) return null;\n  const d = new Date(tsStr);\n  return isNaN(d.getTime()) ? null : d;\n}\n\nconst now = new Date();\n\nfunction inWindow(row, start, end) {\n  const ts = parseTs(row.timestamp);\n  if (ts === null) return false;\n  return ts >= start && ts < end;\n}\n\nlet currentRows, priorRows, hasComparison;\n\nif (windowDays) {\n  const currentStart = new Date(now.getTime() - windowDays * 24 * 60 * 60 * 1000);\n  currentRows = rows.filter(r => inWindow(r, currentStart, now));\n\n  const priorStart = new Date(now.getTime() - windowDays * 2 * 24 * 60 * 60 * 1000);\n  const priorEnd = currentStart;\n  priorRows = rows.filter(r => inWindow(r, priorStart, priorEnd));\n  hasComparison = true;\n} else {\n  currentRows = rows;\n  priorRows = [];\n  hasComparison = false;\n}\n\nfunction safeFloat(val, defaultVal = 0.0) {\n  const n = parseFloat(val);\n  return isNaN(n) ? defaultVal : n;\n}\n\nfunction computePeriodStats(periodRows) {\n  const total = periodRows.length;\n  const scores = periodRows\n    .filter(r => r.match_score !== null && r.match_score !== undefined && r.match_score !== '')\n    .map(r => safeFloat(r.match_score));\n  const avgScore = scores.length\n    ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 100) / 100\n    : 0;\n\n  const recCounts = { strong: 0, partial: 0, weak: 0 };\n  for (const r of periodRows) {\n    const decision = String(r.decision || '').trim().toLowerCase();\n    if (decision === 'strong match') recCounts.strong += 1;\n    else if (decision === 'partial match') recCounts.partial += 1;\n    else if (decision === 'weak match') recCounts.weak += 1;\n  }\n\n  const coverLettersGenerated = periodRows.filter(r =>\n    ['true', 'yes', '1'].includes(String(r.cover_letter_generated || '').trim().toLowerCase())\n  ).length;\n  const coverLetterRate = total\n    ? Math.round((coverLettersGenerated / total) * 100) / 100\n    : 0;\n\n  return {\n    total_applications: total,\n    avg_match_score: avgScore,\n    strong_match_count: recCounts.strong,\n    partial_match_count: recCounts.partial,\n    weak_match_count: recCounts.weak,\n    cover_letters_generated: coverLettersGenerated,\n    cover_letter_generation_rate: coverLetterRate,\n  };\n}\nconst currentStats = computePeriodStats(currentRows);\n\nconst result = {\n  window_days: windowDays,\n  is_scheduled_run: isScheduledRun,\n  has_comparison: hasComparison,\n  current_period: currentStats,\n};\n\nif (hasComparison) {\n  const priorStats = computePeriodStats(priorRows);\n  result.prior_period = priorStats;\n\n  const delta = (curr, prev) => Math.round((curr - prev) * 100) / 100;\n\n  result.deltas = {\n    total_applications: delta(currentStats.total_applications, priorStats.total_applications),\n    avg_match_score: delta(currentStats.avg_match_score, priorStats.avg_match_score),\n    cover_letter_generation_rate: delta(\n      currentStats.cover_letter_generation_rate,\n      priorStats.cover_letter_generation_rate\n    ),\n  };\n}\n\n// --- Raw gap strings from the current period, for the LLM to cluster into themes ---\nresult.gaps_identified_raw = currentRows\n  .map(r => (r.gaps_identified || '').trim())\n  .filter(g => g.length > 0);\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5712,
+        1248
+      ],
+      "id": "94c6ec9a-ecc9-47c2-b77c-c457c9ef38af",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "63f2f471-7a68-4446-9507-bd5a879625ab",
+              "name": "summary",
+              "value": "={{ $('Normalize Output').item.json.summary }}",
+              "type": "string"
+            },
+            {
+              "id": "00d49bcc-09a9-464c-9b8c-33b39ab186ea",
+              "name": "recurring_gap_themes",
+              "value": "={{ $('Normalize Output').item.json.recurring_gap_themes }}",
+              "type": "array"
+            },
+            {
+              "id": "844817c2-fece-49a0-8192-cc586bca4dd4",
+              "name": "next_actions",
+              "value": "={{ $('Normalize Output').item.json.next_actions }}",
+              "type": "array"
+            },
+            {
+              "id": "38ee8b91-a2da-49e4-98be-49067ce0474c",
+              "name": "stats",
+              "value": "={{ $('Normalize Output').item.json.stats }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        6752,
+        1344
+      ],
+      "id": "60650782-835d-4567-b7de-9435f187bd06",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Tag Scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Tag OnDemand",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag Scheduled": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tag OnDemand": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Resolve Window",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Window": {
+      "main": [
+        [
+          {
+            "node": "Read Applications",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Applications": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Normalize Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Output": {
+      "main": [
+        [
+          {
+            "node": "Is Scheduled Run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Scheduled Run?": {
+      "main": [
+        [
+          {
+            "node": "Send Weekly Telegram Digest",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "56f1cdd0-0aad-4f82-9bff-176b8cfc3b44",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "80927a9b73ab1eef3e8a5a62be35ceebf116b1a97baaabc437caa65d9e16d796"
+  },
+  "nodeGroups": [],
+  "id": "72CdCUxffC6WUDTu",
+  "tags": []
+}

@@ -1,0 +1,363 @@
+{
+  "name": "save_resume",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "resume_text"
+            },
+            {
+              "name": "chat_id"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        1472,
+        1024
+      ],
+      "id": "23f997c2-358a-4985-9703-de1c25520656",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Extract the following fields from this resume text and return them as JSON: name, skills, years_experience, education, past_roles. \nif years_experience <1 set it to 1\nResume text: {{ $json.resume_text }}",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1760,
+        1024
+      ],
+      "id": "70246b82-0f11-4bab-8723-42113f9c28c2",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.7-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1696,
+        1232
+      ],
+      "id": "86b25fb4-41e3-4146-a793-1855dd4a468d",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "WZIZeRkqJRa4ERz0",
+          "name": "paid-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"name\": {\n      \"type\": \"string\",\n      \"description\": \"Full name of the resume owner\"\n    },\n    \"skills\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" },\n      \"description\": \"List of technical and professional skills mentioned in the resume\"\n    },\n    \"years_experience\": {\n      \"type\": \"string\",\n      \"description\": \"Total years of professional experience, as stated or reasonably inferred from work history dates\"\n    },\n    \"education\": {\n      \"type\": \"string\",\n      \"description\": \"Degree, field of study, and institution, combined into one readable string\"\n    },\n    \"past_roles\": {\n      \"type\": \"array\",\n      \"items\": { \"type\": \"string\" },\n      \"description\": \"Job titles held, in reverse chronological order if determinable\"\n    }\n  },\n  \"required\": [\"name\", \"skills\", \"years_experience\", \"education\", \"past_roles\"]\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1904,
+        1232
+      ],
+      "id": "24c29433-8b28-4354-93bd-8d31287d9839",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1563753373,
+          "mode": "list",
+          "cachedResultName": "profile",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1563753373"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name ": "={{ $json.name }}",
+            "skills": "={{ $json.skills }}",
+            "years_experience": "={{ $json.years_experience }}",
+            "education ": "={{ $json.education }}",
+            "past_roles": "={{ $json.past_roles }}",
+            " raw_resume_text ": "={{ $json[' raw_resume_text '] }}",
+            "last_updated": "={{ $json.last_updated }}",
+            "profile_id": "={{ $json.profile_id }}"
+          },
+          "matchingColumns": [
+            "profile_id"
+          ],
+          "schema": [
+            {
+              "id": "profile_id",
+              "displayName": "profile_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "name ",
+              "displayName": "name ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "skills",
+              "displayName": "skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "years_experience",
+              "displayName": "years_experience",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "education ",
+              "displayName": "education ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "past_roles",
+              "displayName": "past_roles",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": " raw_resume_text ",
+              "displayName": " raw_resume_text ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "last_updated",
+              "displayName": "last_updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2448,
+        1024
+      ],
+      "id": "aca7f801-51a5-4b1e-b7e8-901b18e79447",
+      "name": "update profile sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8349435f-35e9-41fa-86e8-e162d77ed00f",
+              "name": "profile_id",
+              "value": "1",
+              "type": "string"
+            },
+            {
+              "id": "626b67c4-a9f8-4387-966b-cde90f0c0c46",
+              "name": "name",
+              "value": "={{ $json.output.name }}",
+              "type": "string"
+            },
+            {
+              "id": "a8e8c5f2-48c6-45e1-b41d-bd899c2bf313",
+              "name": "skills",
+              "value": "={{ $json.output.skills.join(', ') }}",
+              "type": "array"
+            },
+            {
+              "id": "d5474d20-1e6d-4087-b91c-56ea2fb5d2e3",
+              "name": "years_experience",
+              "value": "={{ $json.output.years_experience }}",
+              "type": "string"
+            },
+            {
+              "id": "054dd3de-b50f-4ced-b831-4747a74d3b47",
+              "name": "education",
+              "value": "={{ $json.output.education }}",
+              "type": "string"
+            },
+            {
+              "id": "38bf778b-571c-458a-adc6-f9cf72245fc6",
+              "name": "past_roles",
+              "value": "={{ $json.output.past_roles.join(', ') }}",
+              "type": "array"
+            },
+            {
+              "id": "80842d2c-0e80-4858-b859-d56649a1fe11",
+              "name": " raw_resume_text ",
+              "value": "={{ $('When Executed by Another Workflow').item.json.resume_text }}",
+              "type": "string"
+            },
+            {
+              "id": "347f34e9-d75f-433b-a2de-86165c0d7ab8",
+              "name": "last_updated",
+              "value": "={{ $now }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {
+          "ignoreConversionErrors": true
+        }
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2160,
+        1024
+      ],
+      "id": "761590d7-aa5a-4d10-a2f7-d67b4f979b4a",
+      "name": "normalize_profile_fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Structured Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "normalize_profile_fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "update profile sheet": {
+      "main": [
+        []
+      ]
+    },
+    "normalize_profile_fields": {
+      "main": [
+        [
+          {
+            "node": "update profile sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "7da81cb1-d67b-4290-aae2-b795dd137c67",
+  "meta": {
+    "instanceId": "80927a9b73ab1eef3e8a5a62be35ceebf116b1a97baaabc437caa65d9e16d796"
+  },
+  "nodeGroups": [],
+  "id": "UnPeS1pKGAv0FZ3T",
+  "tags": []
+}

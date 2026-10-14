@@ -1,0 +1,921 @@
+{
+  "name": "bootcamp-project",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -1376,
+        304
+      ],
+      "id": "a1851636-2a95-406b-b5a0-b9b31667fc4a",
+      "name": "Telegram Trigger",
+      "webhookId": "307c9473-878d-4f6f-9a0c-a3ed86f7d026",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "google/gemini-3.7-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        480,
+        688
+      ],
+      "id": "9f246077-1d67-42fb-ab6b-a2c199790d53",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "WZIZeRkqJRa4ERz0",
+          "name": "paid-key"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        656,
+        704
+      ],
+      "id": "28f3413e-8c04-429c-afb9-56c4df59261e",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.guardrailsInput }}",
+        "options": {
+          "systemMessage": "You are a Job Application Assistant helping the user manage their job search over Telegram.\n\nYou have five tools available:\n- save_resume: use when the user has uploaded or pasted their resume text.\n- analyze_job: use when the user has pasted a job description/posting they want evaluated against their saved profile.\n- generate_cover_letter: use only after analyze_job has produced a strong match score. Do not generate a cover letter for a weak or borderline match unless the user explicitly asks for one anyway.\n- get_insights: use when the user asks about their overall progress, patterns, or wants a summary of their applications so far.\n- get_profile_info_tool: Use this when the user asks a general question about their own background, skills, or career direction that isn't tied to a specific job posting — e.g. 'what roles fit me', 'should I apply to X field', 'summarize my resume'. Do NOT use this for evaluating fit against a specific job — that's analyze_job's job.\n\nDecide which tool (if any) to call based on the content of the user's message — do not call a tool just because one is available. If the message is casual conversation or a question you can answer directly, respond without calling a tool.\n\nIf no resume has been saved yet and the user tries to analyze a job, tell them to send their resume first.\n\nWhen formatting responses for Telegram, use only *bold* and _italic_ for emphasis. Never use Markdown headers (###, ##, #) \n\nKeep replies concise and conversational, suitable for a Telegram chat."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        608,
+        432
+      ],
+      "id": "b8b809dd-ff58-4097-b33c-0e4761efeac2",
+      "name": "AI Agent - Orchestrator"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Please upload your resume as a PDF.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        224
+      ],
+      "id": "f36c431e-2e57-4302-90db-8a14d30dd5e7",
+      "name": "non-valid format types reply",
+      "webhookId": "544dc89c-bce7-4518-bb5c-0588d0edcbdd",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4974e26d-5b8c-4d93-a361-b02f1735e202",
+              "leftValue": "={{ $json.message.document }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1152,
+        304
+      ],
+      "id": "7a3f5630-9df7-4af9-a404-5cf45738cdd5",
+      "name": "If doc found"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f077192c-0346-4511-9532-6fcfc2dafff2",
+              "leftValue": "={{ $('Telegram Trigger').item.json.message.document.mime_type }}",
+              "rightValue": "application/pdf",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -928,
+        80
+      ],
+      "id": "01b8e73e-aa36-4a11-9e98-5cccdf89c838",
+      "name": "checks doc type"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $('Telegram Trigger').item.json.message.document.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        64
+      ],
+      "id": "9b803809-3025-410f-8d63-7a569df111e6",
+      "name": "Get a file",
+      "webhookId": "e94a9a38-ee04-4ef3-9730-892994ac0b64",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        -480,
+        64
+      ],
+      "id": "606fdfa0-02cb-4fb4-a50f-5e9fd88dfaef",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3d5c0e0d-9f3d-4989-9845-2709e286f3d0",
+              "name": "user_text",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -688,
+        464
+      ],
+      "id": "9a9d2b46-b487-470f-8eee-0a1eef7e283a",
+      "name": "user_text_plain"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "77c21ccf-376c-4bde-a164-cc7319cf335b",
+              "name": "user_text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -304,
+        240
+      ],
+      "id": "f0cdb3d3-295e-4145-867f-3c6fa65ea7d3",
+      "name": "user_text_doc"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7912a282-a7e2-4639-b14f-af2c461c7463",
+              "leftValue": "={{ $json.text }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -256,
+        64
+      ],
+      "id": "025e6155-53c9-4387-9da2-e2f7fa5e3dc0",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Could not extract resume, please check the file again",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4cfeee18-d216-4a20-bc90-d4fdb73ef5d5",
+      "name": "Send a text message",
+      "webhookId": "c8c93288-f5f1-444b-ad24-722740163bba",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "description": "Generates a tailored cover letter for a job the user has already analyzed\nvia analyze_job, and saves it to the Applications sheet.\n\nCall this tool when the user asks you to write/generate a cover letter.\n\n- If the user does not specify which job, leave both job_title and company\n  empty — the tool will use the most recently analyzed job.\n- If the user names a company or job title (e.g. \"the Google one\",\n  \"the backend engineer role\"), pass whatever they said in job_title\n  and/or company — partial names are fine, matching is not exact.\n\nThe tool enforces the match-score gate itself: it will only generate a\nletter if that job's recommendation was \"Strong Match\" or \"Partial Match\".\nIf it was \"Weak Match\", the tool will NOT generate a letter — do not try\nto override this or generate the letter yourself.\n\nPossible outcomes you must handle:\n- status \"generated\": a letter was written and saved. Tell the user it's\n  ready and show them the cover_letter_text.\n- status \"skipped\": the job's match was too weak. Tell the user why,\n  using the reason field. Do not apologize excessively or offer to\n  generate one anyway.\n- status \"not_found\": no matching job was found in Applications. Ask the\n  user to double check the company/title, or to analyze the job first.\n- status \"needs_clarification\": more than one job matched. Read the\n  candidates list back to the user (job title, company, and date for\n  each) and ask which one they mean. Do not guess or pick one yourself.\n  Wait for their reply, then call this tool again with a more specific\n  job_title/company.",
+        "workflowId": {
+          "__rl": true,
+          "value": "3mOsiTUTBKi1whd8",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/3mOsiTUTBKi1whd8",
+          "cachedResultName": "generate_cover_letter"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "job_title": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('job_title', `Optional. The job title the user wants a cover letter for, if they\nspecified one (e.g. \"backend engineer\"). Leave empty if the user didn't\nname a specific job — this defaults to the most recently analyzed job.\nPartial matches are fine; do not guess an exact title if the user was vague.`, 'string') }}",
+            "company": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('company', `Optional. The company name the user wants a cover letter for, if they\nspecified one (e.g. \"Google\"). Leave empty if the user didn't name a\nspecific job — this defaults to the most recently analyzed job.\nPartial matches are fine (e.g. \"Google\" matches \"Google LLC\").`, 'string') }}"
+          },
+          "matchingColumns": [
+            "row_number"
+          ],
+          "schema": [
+            {
+              "id": "job_title",
+              "displayName": "job_title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "company",
+              "displayName": "company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        784
+      ],
+      "id": "ec1da3f4-6b7a-4b8d-92b7-44410d239aed",
+      "name": "Call 'generate_cover_letter'"
+    },
+    {
+      "parameters": {
+        "description": "Call this tool when the user asks to get insights of the week or previous weeks",
+        "workflowId": {
+          "__rl": true,
+          "value": "72CdCUxffC6WUDTu",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/72CdCUxffC6WUDTu",
+          "cachedResultName": "get_insights"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "time_window_days": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('time_window_days', ``, 'string') }}"
+          },
+          "matchingColumns": [
+            "time_window_days"
+          ],
+          "schema": [
+            {
+              "id": "time_window_days",
+              "displayName": "time_window_days",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        992,
+        768
+      ],
+      "id": "5c2e8c08-225e-46ef-9a57-b9cffb1625ee",
+      "name": "Call 'get_insights'"
+    },
+    {
+      "parameters": {
+        "description": "Call this when the user has shared their resume so it can be extracted and saved to their profile.",
+        "workflowId": {
+          "__rl": true,
+          "value": "UnPeS1pKGAv0FZ3T",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/UnPeS1pKGAv0FZ3T",
+          "cachedResultName": "save_resume"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "resume_text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('resume_text', ``, 'string') }}",
+            "chat_id": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "resume_text",
+              "displayName": "resume_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1424,
+        752
+      ],
+      "id": "78c4dd1c-bcad-4896-b939-987f0cd1cf82",
+      "name": "Call 'save_resume'"
+    },
+    {
+      "parameters": {
+        "description": "Call this when the user has pasted a job description, or a job posting URL, that they want evaluated against their saved profile.",
+        "workflowId": {
+          "__rl": true,
+          "value": "nJ58RkeGGMOjEMtU",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/nJ58RkeGGMOjEMtU",
+          "cachedResultName": "analyze_job"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "user_text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('user_text', ``, 'string') }}",
+            "chat_id": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "user_text",
+              "displayName": "user_text",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "chat_id",
+              "displayName": "chat_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        784
+      ],
+      "id": "079466da-c0b6-48db-a04e-d87cd1819619",
+      "name": "Call 'analyze_job'"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.user_text }}",
+        "guardrails": {
+          "jailbreak": {
+            "value": {
+              "threshold": 0.7
+            }
+          },
+          "topicalAlignment": {
+            "value": {
+              "threshold": 0.7,
+              "prompt": "You are a content analysis system that determines if text stays on topic.\n\nBUSINESS SCOPE: An AI job application assistant. This includes: saving/storing resumes, analyzing job postings against a candidate's profile, generating cover letters, summarizing application progress, and general job-search/career conversation such as resume feedback, interview prep, or career advice. Flag only content clearly unrelated to job searching or careers.\n\nDetermine if the text stays within the defined business scope. Flag any content\nthat strays from the allowed topics."
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.guardrails",
+      "typeVersion": 2,
+      "position": [
+        -32,
+        384
+      ],
+      "id": "cdaafe09-6ac1-4e9f-97d6-08bed6289cfd",
+      "name": "input Guardrails"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "guardrails": {
+          "nsfw": {
+            "value": {
+              "threshold": 0.7
+            }
+          },
+          "topicalAlignment": {
+            "value": {
+              "threshold": 0.7,
+              "prompt": "You are a content analysis system that determines if text stays on topic.\n\nBUSINESS SCOPE: An AI job application assistant. This includes: saving/storing resumes, analyzing job postings against a candidate's profile, generating cover letters, summarizing application progress, and general job-search/career conversation such as resume feedback, interview prep, or career advice. Flag only content clearly unrelated to job searching or careers.\n\nDetermine if the text stays within the defined business scope. Flag any content\nthat strays from the allowed topics."
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.guardrails",
+      "typeVersion": 2,
+      "position": [
+        976,
+        432
+      ],
+      "id": "b52fba8c-f1ad-4fc5-a712-92248eceec6a",
+      "name": "Guardrails"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Sorry can't share this response, try asking another thing",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        464
+      ],
+      "id": "dd865dca-583c-4d85-a96c-8e64053ec05d",
+      "name": "failed output guardrail message",
+      "webhookId": "5d58d7a7-8922-4bc9-b1e1-29529d6715a3",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.guardrailsInput }}",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1408,
+        304
+      ],
+      "id": "31732177-8556-41a8-8a06-8a8b20d4dd91",
+      "name": "success guardrail output",
+      "webhookId": "d1e2f3a4-5b6c-4d7e-8f9a-0b1c2d3e4f5a",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "Sorry can't help you with this request",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        272,
+        480
+      ],
+      "id": "d160b171-382b-4fe6-b69b-f2655bb5de8a",
+      "name": "failed input guardrail",
+      "webhookId": "41195690-26db-4857-83bb-355acf9da6e3",
+      "credentials": {
+        "telegramApi": {
+          "id": "wq0Vw2Lf49SmyUV2",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "use this for general background/career questions, not job-specific fit",
+        "documentId": {
+          "__rl": true,
+          "value": "1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc",
+          "mode": "list",
+          "cachedResultName": "bootcamp_project",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1563753373,
+          "mode": "list",
+          "cachedResultName": "profile",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1nJALNEszfncOkPG8Tqi7yfutOTpYdmE0ZBcMFzxYUpc/edit#gid=1563753373"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        832,
+        736
+      ],
+      "id": "eadf46e4-5d41-442e-917c-268ebe4a3258",
+      "name": "get_profile_info_tool",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "htX8zti3HVw5ruma",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If doc found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "input Guardrails",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Guardrails",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If doc found": {
+      "main": [
+        [
+          {
+            "node": "checks doc type",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "user_text_plain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "checks doc type": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "non-valid format types reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "user_text_doc": {
+      "main": [
+        [
+          {
+            "node": "input Guardrails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "user_text_plain": {
+      "main": [
+        [
+          {
+            "node": "input Guardrails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "user_text_doc",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent - Orchestrator": {
+      "main": [
+        [
+          {
+            "node": "Guardrails",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'generate_cover_letter'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'get_insights'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'save_resume'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'analyze_job'": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "input Guardrails": {
+      "main": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "failed input guardrail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardrails": {
+      "main": [
+        [
+          {
+            "node": "success guardrail output",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "failed output guardrail message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_profile_info_tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent - Orchestrator",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "868ae823-cd89-40ac-a25b-ad900a07e489",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "80927a9b73ab1eef3e8a5a62be35ceebf116b1a97baaabc437caa65d9e16d796"
+  },
+  "nodeGroups": [],
+  "id": "GgQ8B7kIvq6juR76",
+  "tags": []
+}
